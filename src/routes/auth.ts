@@ -29,15 +29,21 @@ export const authRoutes = async (fastify: FastifyInstance) => {
 
     const { access_token } = createUserBody.parse(request.body);
 
-    const userResponse = await fetch(
-      "https://www.googleapis.com/oauth2/v2/userinfo",
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${access_token}`,
-        },
-      }
-    );
+    let userResponse = null;
+
+    try {
+      userResponse = await fetch(
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        {
+          method: "GET",
+          headers: {
+            Authorization: `Bearer ${access_token}`,
+          },
+        }
+      );
+    } catch (error: any) {
+      return { error: "internal server error" };
+    }
 
     const userData = await userResponse.json();
 
