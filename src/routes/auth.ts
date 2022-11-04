@@ -1,8 +1,27 @@
 import { prisma } from "../lib/prisma";
 import type { FastifyInstance } from "fastify";
 import { z } from "zod";
+import { authenticate } from "../plugins/authenticate";
+
+type GenerateTokenParams = {
+  id: string;
+  name: string;
+  avatarUrl: string | null;
+};
 
 export const authRoutes = async (fastify: FastifyInstance) => {
+  fastify.get(
+    "/me",
+    {
+      onRequest: [authenticate],
+    },
+    async (request) => {
+      await request.jwtVerify();
+
+      return { user: request.user };
+    }
+  );
+
   fastify.post("/users", async (request) => {
     const createUserBody = z.object({
       access_token: z.string(),
@@ -37,6 +56,18 @@ export const authRoutes = async (fastify: FastifyInstance) => {
       },
     });
 
+    const generateToken = ({ id, name, avatarUrl }: GenerateTokenParams) =>
+      fastify.jwt.sign(
+        {
+          name,
+          avatarUrl,
+        },
+        {
+          sub: id,
+          expiresIn: "1d",
+        }
+      );
+
     if (!user) {
       const newUser = await prisma.user.create({
         data: {
@@ -47,9 +78,21 @@ export const authRoutes = async (fastify: FastifyInstance) => {
         },
       });
 
-      return { newUser };
+      const token = generateToken({
+        id: newUser.id,
+        name: newUser.name,
+        avatarUrl: newUser.avatarUrl,
+      });
+
+      return { token };
     }
 
-    return { userInfo };
+    const token = generateToken({
+      id: user.id,
+      name: user.name,
+      avatarUrl: user.avatarUrl,
+    });
+
+    return { token };
   });
 };
