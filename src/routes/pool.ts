@@ -51,7 +51,7 @@ export const poolRoutes = async (fastify: FastifyInstance) => {
   });
 
   fastify.post(
-    "/post/join",
+    "/pools/join",
     {
       onRequest: [authenticate],
     },
